@@ -1,0 +1,288 @@
+import re
+import time
+import numpy as np
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+url = "https://wizardofodds.com/play/blackjack/"
+driver = webdriver.Firefox()
+driver.get(url)
+
+def cards_value(x):
+
+    global player_cards, total_value
+
+    cards = driver.find_element(By.ID, value = "PlayerCards" + str(x))
+    cards = cards.find_elements(By.TAG_NAME, "div")
+    try :
+        player_cards = list(map(lambda x : int(x.get_attribute("class")[6:8])%13, cards))
+        player_cards = [x + 2 for x in player_cards]
+
+        for i in range(len(player_cards)) :
+            if player_cards[i] in [10, 11, 12, 13] :
+                player_cards[i] = 10
+            elif player_cards[i] == 14 :
+                player_cards[i] = 11
+
+        for i in range(len(player_cards) - 1) :
+            if sum(player_cards) > 21 :
+                try :
+                    player_cards[player_cards.index(11)] = 1
+                except :
+                    pass
+
+        print("Cards : ", player_cards)
+
+        total_value = sum(player_cards)
+        print("Total value : ", total_value)
+
+    except :
+        pass
+
+
+def blackjack(x) :
+
+    global player_cards, total_value, n, button, button_name, j
+
+    cards_value(x)
+
+    try :
+
+        if ((total_value == 21) & (dealer_card1 == 11)) :
+            button = driver.find_element(by = By.ID, value = "ButtonStand")
+            button.click()
+
+        if (len(player_cards) == 2) & (player_cards[0] in [1,11]) & (player_cards[-1] in [1,11]) :
+            button = driver.find_element(by = By.ID, value = "ButtonSplit")
+            button.click()
+
+        while (total_value <= 20) & (button_name != "ButtonStand") & (button_name != "ButtonDouble") :
+
+            if (len(player_cards) == 2) & (player_cards[0] == player_cards[-1]) :
+
+                if ((total_value == 18) & (dealer_card1 in [2,3,4,5,6,8,9])) | ((total_value == 16) & (2 <= dealer_card1 <= 9)) | ((total_value in [4,6,14]) & (2 <= dealer_card1 <= 7)) | ((total_value == 12) & (2 <= dealer_card1 <= 6)) | ((total_value == 8) & (5 <= dealer_card1 <= 6)) :
+
+                    try :
+                        button = driver.find_element(by = By.ID, value = "ButtonSplit")
+                        button.click()
+
+                        for j in range(2,0,-1) :
+
+                            time.sleep(1)
+
+                            button_name = ""
+
+                            blackjack(j)
+
+                    except :
+                        print("Le split n'est plus possible")
+                        player_cards[0] = player_cards[0] + 1
+                        player_cards[1] = player_cards[1] - 1
+
+                        if ((10 <= total_value <= 11) & (2 <= dealer_card1 <= 9)) | ((total_value == 9) & (3 <= dealer_card1 <= 6)) :
+                            try :
+                                button = driver.find_element(by = By.ID, value = "ButtonDouble")
+                                button.click()
+                            except :
+                                print("Le double n'est plus possible")
+                                button = driver.find_element(by = By.ID, value = "ButtonHit")
+                                button.click()
+
+                        elif ((17 <= total_value <= 20) | ((13 <= total_value <= 16) & (2 <= dealer_card1 <= 6)) | (total_value == 12) & (4 <= dealer_card1 <= 6)):
+
+                            button = driver.find_element(by = By.ID, value = "ButtonStand")
+                            button.click()
+
+                        else :
+                            button = driver.find_element(by = By.ID, value = "ButtonHit")
+                            button.click()
+
+                elif (total_value == 20) | ((total_value == 18) & (dealer_card1 in [7,10,11])) :
+
+                    button = driver.find_element(by = By.ID, value = "ButtonStand")
+                    button.click()
+
+                elif ((total_value == 10) & (2 <= dealer_card1 <= 9)) :
+
+                    button = driver.find_element(by = By.ID, value = "ButtonDouble")
+                    button.click()
+
+                else :
+                    button = driver.find_element(by = By.ID, value = "ButtonHit")
+                    button.click()
+
+            elif (player_cards[0] == 11) ^ (player_cards[-1] == 11) :
+
+                if ((total_value == 17) & (3 <= dealer_card1 <= 6)) | ((15 <= total_value <= 16) & (4 <= dealer_card1 <= 6)) | ((13 <= total_value <= 14) & (5 <= dealer_card1 <= 6)) :
+                    try :
+                        button = driver.find_element(by = By.ID, value = "ButtonDouble")
+                        button.click()
+                    except :
+                        print("Le double n'est plus possible")
+                        button = driver.find_element(by = By.ID, value = "ButtonHit")
+                        button.click()
+
+                elif (total_value == 18) & (2 <= dealer_card1 <= 8) :
+                    if (3 <= dealer_card1 <= 6) :
+                        try :
+                            button = driver.find_element(by = By.ID, value = "ButtonDouble")
+                            button.click()
+                        except :
+                            print("Le double n'est plus possible")
+                            button = driver.find_element(by = By.ID, value = "ButtonStand")
+                            button.click()
+
+                    else :
+                        button = driver.find_element(by = By.ID, value = "ButtonStand")
+                        button.click()
+
+
+                elif (19 <= total_value <= 20) | ((total_value == 18) & (2 <= dealer_card1 <= 8)) :
+
+                    button = driver.find_element(by = By.ID, value = "ButtonStand")
+                    button.click()
+
+                else :
+                    button = driver.find_element(by = By.ID, value = "ButtonHit")
+                    button.click()
+
+
+            elif ((10 <= total_value <= 11) & (2 <= dealer_card1 <= 9)) | ((total_value == 9) & (3 <= dealer_card1 <= 6)) :
+                try :
+                    button = driver.find_element(by = By.ID, value = "ButtonDouble")
+                    button.click()
+                except :
+                    print("Le double n'est plus possible")
+                    button = driver.find_element(by = By.ID, value = "ButtonHit")
+                    button.click()
+
+            elif ((17 <= total_value <= 20) | ((13 <= total_value <= 16) & (2 <= dealer_card1 <= 6)) | (total_value == 12) & (4 <= dealer_card1 <= 6)):
+
+                button = driver.find_element(by = By.ID, value = "ButtonStand")
+                button.click()
+
+            else :
+                button = driver.find_element(by = By.ID, value = "ButtonHit")
+                button.click()
+
+
+            time.sleep(1)
+
+            button_name = button.get_attribute("id")
+            print(button_name)
+
+            if button_name == "ButtonHit" :
+                cards_value(x)
+
+    except :
+        pass
+
+
+
+
+total_timer = 0
+durations = []
+hands = []
+defeats = []
+
+while total_timer < 600 :
+
+    total_value = 0
+    bankroll_value = 1000
+    nb_hands = 1
+
+    tic = time.perf_counter()
+
+    try :
+        button = driver.find_element(by = By.ID, value = "Chip10")
+        button.click()
+        button = driver.find_element(by = By.ID, value = "Circle")
+        button.click()
+        button.click()
+        button = driver.find_element(by = By.ID, value = "ButtonDeal")
+        button.click()
+
+    except :
+        print("Main en cours")
+
+        time.sleep(1)
+
+    while 0 < bankroll_value < 1040 :
+
+        try :
+            button = driver.find_element(by = By.ID, value = "ButtonRebet")
+            button.click()
+
+            button = driver.find_element(by = By.ID, value = "ButtonDeal")
+            button.click()
+
+            nb_hands = nb_hands + 1
+
+        except :
+            try :
+                button = driver.find_element(by = By.CLASS_NAME, value = "subscribe-close")
+                button.click()
+
+                button = driver.find_element(by = By.ID, value = "ButtonRebet")
+                button.click()
+
+                button = driver.find_element(by = By.ID, value = "ButtonDeal")
+                button.click()
+
+                nb_hands = nb_hands + 1
+
+            except :
+                pass
+
+
+        time.sleep(2)
+
+        dealer_cards = driver.find_element(By.ID, value = "DealerCards")
+        dealer_cards = dealer_cards.find_elements(By.TAG_NAME, "div")
+        try :
+            dealer_card1 = int(dealer_cards[0].get_attribute("class")[6:8])%13+2
+
+            if dealer_card1 in [10, 11, 12, 13] :
+                dealer_card1 = 10
+            elif dealer_card1 == 14 :
+                dealer_card1 = 11
+
+            print("Dealer card : ", dealer_card1)
+
+        except :
+            pass
+
+        j = 0
+        button_name = button.get_attribute("id")
+
+        time.sleep(1)
+
+        blackjack(j)
+
+        time.sleep(2)
+
+        bankroll = driver.find_elements(By.XPATH, "//div[@id='Bankroll']/img")
+        bankroll[-2:] = []
+
+        try :
+            bankroll_value = list(map(lambda x : int(x.get_attribute("class")[-1]), bankroll))
+            T = 0
+            for i in range(len(bankroll_value)) :
+                T = T + (10**i) * bankroll_value[-i-1]
+
+        except :
+            pass
+
+        bankroll_value = T
+
+    toc = time.perf_counter()
+    timer = toc - tic
+    durations.append(timer)
+    hands.append(nb_hands)
+
+    if bankroll_value == 0 :
+        defeats.append(1)
+    defeats.append(0)
+
+    total_timer = sum(durations)
+
+    driver.refresh()
